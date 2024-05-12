@@ -116,20 +116,14 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
 
     for (int i = 0; i < nIteration; i++)
     {
-        bool A_not_converged = eps_nondiag < glm::abs(A_12);
-        bool B_not_converged = eps_nondiag < glm::abs(A_01);
-        bool C_not_converged = eps_nondiag < glm::abs(A_02);
-        if( A_not_converged == false && B_not_converged == false && C_not_converged == false )
-        {
-            break;
-        }
+        int nConverged = 0;
 
         {
             float b = A_12;
             float a = A_11;
             float d = A_22;
 
-            if (A_not_converged)
+            if( eps_nondiag < glm::abs(b) )
             {
                 float c;
                 float s;
@@ -160,10 +154,10 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_11 = nA_11;
                 A_12 = nA_12;
                 A_22 = nA_22;
-                //printf("%f\n", L[1][0] - nA_01);
-                //printf("%f\n", L[2][0] - nA_02);
-                //printf("%f\n", L[1][1] - nA_11);
-                //printf("%f\n", L[2][2] - nA_22);
+            }
+            else
+            {
+                nConverged++;
             }
         }
 
@@ -171,7 +165,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
             float b = A_01;
             float a = A_00;
             float d = A_11;
-            if (B_not_converged)
+            if (eps_nondiag < glm::abs(b))
             {
                 float c;
                 float s;
@@ -202,11 +196,10 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_02 = nA_02;
                 A_11 = nA_11;
                 A_12 = nA_12;
-                //printf("%f\n", L[0][0] - nA_00);
-                //printf("%f\n", L[1][0] - nA_01);
-                //printf("%f\n", L[2][0] - nA_02);
-                //printf("%f\n", L[1][1] - nA_11);
-                //printf("%f\n", L[2][1] - nA_12);
+            }
+            else
+            {
+                nConverged++;
             }
         }
 
@@ -214,7 +207,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
             float b = A_02;
             float a = A_00;
             float d = A_22;
-            if (C_not_converged)
+            if (eps_nondiag < glm::abs(b))
             {
                 float c;
                 float s;
@@ -245,12 +238,16 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_02 = nA_02;
                 A_12 = nA_12;
                 A_22 = nA_22;
-                //printf("%f\n", L[0][0] - nA_00);
-                //printf("%f\n", L[1][0] - nA_01);
-                //printf("%f\n", L[2][0] - nA_02);
-                //printf("%f\n", L[2][1] - nA_12);
-                //printf("%f\n", L[2][2] - nA_22);
             }
+            else
+            {
+                nConverged++;
+            }
+        }
+
+        if ( 3 <= nConverged )
+        {
+            break;
         }
     }
 
