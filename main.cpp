@@ -94,7 +94,7 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
-void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration = 4 )
+void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration )
 {
     float A_00 = M[0][0];
     float A_01 = M[1][0];
@@ -117,12 +117,20 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
     const float eps = 1.0e-15f;
     for (int i = 0; i < nIteration; i++)
     {
+        bool A_not_converged = eps < glm::abs(A_12);
+        bool B_not_converged = eps < glm::abs(A_01);
+        bool C_not_converged = eps < glm::abs(A_02);
+        if( A_not_converged == false && B_not_converged == false && C_not_converged == false )
+        {
+            break;
+        }
+
         {
             float b = A_12;
             float a = A_11;
             float d = A_22;
 
-            if (eps < glm::abs(b))
+            if (A_not_converged)
             {
                 float c;
                 float s;
@@ -164,7 +172,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
             float b = A_01;
             float a = A_00;
             float d = A_11;
-            if (eps < glm::abs(b))
+            if (B_not_converged)
             {
                 float c;
                 float s;
@@ -207,7 +215,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
             float b = A_02;
             float a = A_00;
             float d = A_22;
-            if (eps < glm::abs(b))
+            if (C_not_converged)
             {
                 float c;
                 float s;
