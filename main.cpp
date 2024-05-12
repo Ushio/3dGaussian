@@ -231,13 +231,15 @@ int main() {
         static int nJacobiItr = 3;
         // naiive 
         {
-            glm::mat3 V_all = glm::identity<glm::mat3>();
+            //glm::mat3 V_all = glm::identity<glm::mat3>();
             float A_00 = cov[0][0];
             float A_01 = cov[1][0];
             float A_02 = cov[2][0];
             float A_11 = cov[1][1];
             float A_12 = cov[2][1];
             float A_22 = cov[2][2];
+
+            glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
             auto sincos_of = []( float *s, float *c, float invTan2Theta )
             {
@@ -268,7 +270,14 @@ int main() {
                         //    0, c, -s,
                         //    0, s, c
                         //);
-                        //L = glm::transpose(P) * L * P;
+
+                        for (int j = 0; j < 2; j++)
+                        {
+                            float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
+                            float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
+                            wbasisXY[j].y = y;
+                            wbasisXY[j].z = z;
+                        }
 
                         float nA_01 = c * A_01 - s * A_02;
                         float nA_02 = c * A_02 + s * A_01;
@@ -284,15 +293,6 @@ int main() {
                         //printf("%f\n", L[2][0] - nA_02);
                         //printf("%f\n", L[1][1] - nA_11);
                         //printf("%f\n", L[2][2] - nA_22);
-
-                        //V_all = V_all * P;
-                        for( int r = 0; r < 3; r++ )
-                        {
-                            float col1 = c * V_all[1][r] - s * V_all[2][r];
-                            float col2 = c * V_all[2][r] + s * V_all[1][r];
-                            V_all[1][r] = col1;
-                            V_all[2][r] = col2;
-                        }
                     }
                 }
 
@@ -312,7 +312,14 @@ int main() {
                         //    s, c, 0,
                         //    0, 0, 1
                         //);
-                        //L = glm::transpose(P) * L * P;
+
+                        for (int j = 0; j < 2; j++)
+                        {
+                            float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
+                            float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
+                            wbasisXY[j].x = x;
+                            wbasisXY[j].y = y;
+                        }
 
                         float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
                         float nA_01 = 0.0f; // focus
@@ -329,15 +336,6 @@ int main() {
                         //printf("%f\n", L[2][0] - nA_02);
                         //printf("%f\n", L[1][1] - nA_11);
                         //printf("%f\n", L[2][1] - nA_12);
-
-                        //V_all = V_all * P;
-                        for (int r = 0; r < 3; r++)
-                        {
-                            float col0 = c * V_all[0][r] - s * V_all[1][r];
-                            float col1 = c * V_all[1][r] + s * V_all[0][r];
-                            V_all[0][r] = col0;
-                            V_all[1][r] = col1;
-                        }
                     }
                 }
 
@@ -357,7 +355,14 @@ int main() {
                         //    0, 1, 0,
                         //    s, 0, c
                         //);
-                        //L = glm::transpose(P) * L * P;
+
+                        for (int j = 0; j < 2; j++)
+                        {
+                            float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
+                            float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
+                            wbasisXY[j].x = x;
+                            wbasisXY[j].z = z;
+                        }
 
                         float nA_00 = c * ( c * A_00 - s * A_02 ) - s * ( c * A_02 - s * A_22 );
                         float nA_01 = c * A_01 - s * A_12;
@@ -374,34 +379,28 @@ int main() {
                         //printf("%f\n", L[2][0] - nA_02);
                         //printf("%f\n", L[2][1] - nA_12);
                         //printf("%f\n", L[2][2] - nA_22);
-
-                        // V_all = V_all * P;
-                        for (int r = 0; r < 3; r++)
-                        {
-                            float col0 = c * V_all[0][r] - s * V_all[2][r];
-                            float col2 = c * V_all[2][r] + s * V_all[0][r];
-                            V_all[0][r] = col0;
-                            V_all[2][r] = col2;
-                        }
-
-                        float new_b = L[2][0];
-                        printf("");
                     }
                 }
             }
 
-            glm::vec3 eigen0 = V_all[0];
-            glm::vec3 eigen1 = V_all[1];
-            glm::vec3 eigen2 = V_all[2];
-
-            glm::vec3 e_prime = glm::cross(eigen0, eigen1);
             //DrawArrow({ 0,0,0 }, eigen0, 0.01f, { 255,0,255 });
             //DrawArrow({ 0,0,0 }, eigen1, 0.01f, { 255,255,0 });
             //DrawArrow({ 0,0,0 }, eigen2, 0.01f, { 0,255,255 });
-            DrawArrow({ 0,0,0 }, eigen0 * std::sqrt(A_00), 0.01f, { 255,0,255 });
-            DrawArrow({ 0,0,0 }, eigen1 * std::sqrt(A_11), 0.01f, { 255,255,0 });
-            DrawArrow({ 0,0,0 }, eigen2 * std::sqrt(A_22), 0.01f, { 0,255,255 });
+            //DrawArrow({ 0,0,0 }, eigen0 * std::sqrt(A_00), 0.01f, { 255,0,255 });
+            //DrawArrow({ 0,0,0 }, eigen1 * std::sqrt(A_11), 0.01f, { 255,255,0 });
+            //DrawArrow({ 0,0,0 }, eigen2 * std::sqrt(A_22), 0.01f, { 0,255,255 });
 
+            glm::vec3 wbasisZ = glm::cross(wbasisXY[0], wbasisXY[1]);
+            glm::vec3 e0 = { wbasisXY[0].x, wbasisXY[1].x, wbasisZ.x };
+            glm::vec3 e1 = { wbasisXY[0].y, wbasisXY[1].y, wbasisZ.y };
+            glm::vec3 e2 = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
+
+            DrawArrow({ 0,0,0 }, e0, 0.01f, { 255,0,255 });
+            DrawArrow({ 0,0,0 }, e1, 0.01f, { 255,255,0 });
+            DrawArrow({ 0,0,0 }, e2, 0.01f, { 0,255,255 });
+            DrawLine(-e0 * std::sqrt(A_00), e0 * std::sqrt(A_00), { 255,0,255 });
+            DrawLine(-e1 * std::sqrt(A_11), e1 * std::sqrt(A_11), { 255,255,0 });
+            DrawLine(-e2 * std::sqrt(A_22), e2 * std::sqrt(A_22), { 0,255,255 });
         }
 
         PopGraphicState();
