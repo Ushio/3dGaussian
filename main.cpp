@@ -136,9 +136,12 @@ int main() {
 
         DrawGrid(GridAxis::XZ, 1.0f, 10, { 128, 128, 128 });
 
-        static glm::vec3 U = { 1, 0, 0 };
-        static glm::vec3 V = { 0, 1, 0 };
-        static glm::vec3 W = { 0, 0, 1 };
+        //static glm::vec3 U = { 1, 0, 0 };
+        //static glm::vec3 V = { 0, 1, 0 };
+        //static glm::vec3 W = { 0, 0, 1 };
+        static glm::vec3 U = { 0.363252401, 0.425909996, -0.522605419 };
+        static glm::vec3 V = { -0.283039778, 0.830360413, 0.830360413 };
+        static glm::vec3 W = { 0.833595634, -0.0345231034,0.551279962 };
         ManipulatePosition(camera, &U, 0.2f);
         ManipulatePosition(camera, &V, 0.2f);
         ManipulatePosition(camera, &W, 0.2f);
@@ -225,6 +228,102 @@ int main() {
             DrawEllipse(W * depth, U * kPrime, V * kPrime, { 128 , 128 , 128 }, 64);
         }
 
+        static int nJacobiItr = 3;
+        // naiive 
+        {
+            glm::mat3 V_all = glm::identity<glm::mat3>();
+            glm::mat3 L = cov;
+
+            auto sincos_of = []( float *s, float *c, float invTan2Theta )
+            {
+                float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
+                float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
+                float sinTheta = tanTheta * cosTheta;
+                *s = sinTheta;
+                *c = cosTheta;
+            };
+
+            const float eps = 1.0e-15f;
+            for (int i = 0; i < nJacobiItr; i++)
+            {
+                {
+                    float b = L[2][1];
+                    float a = L[1][1];
+                    float d = L[2][2];
+
+                    if( eps < glm::abs( b ) )
+                    {
+                        float c;
+                        float s;
+                        float invTan2Theta = 0.5f * ( d - a ) / b;
+                        sincos_of( &s, &c, invTan2Theta );
+
+                        glm::mat3 P = glm::mat3(
+                            1, 0, 0,
+                            0, c, -s,
+                            0, s, c
+                        );
+                        L = glm::transpose(P) * L * P;
+
+                        V_all = V_all * P;
+
+                        float new_b = L[2][1];
+                    }
+                }
+
+                {
+                    float b = L[1][0];
+                    float a = L[0][0];
+                    float d = L[1][1];
+                    float c;
+                    float s;
+                    float invTan2Theta = 0.5f * (d - a) / b;
+                    sincos_of(&s, &c, invTan2Theta);
+
+                    glm::mat3 P = glm::mat3(
+                        c, -s, 0,
+                        s, c, 0,
+                        0, 0, 1
+                    );
+                    L = glm::transpose(P) * L * P;
+
+                    V_all = V_all * P;
+
+                    float new_b = L[1][0];
+                    printf("");
+                }
+
+                {
+                    float b = L[2][0];
+                    float a = L[0][0];
+                    float d = L[2][2];
+                    float c;
+                    float s;
+                    float invTan2Theta = 0.5f * (d - a) / b;
+                    sincos_of(&s, &c, invTan2Theta);
+
+                    glm::mat3 P = glm::mat3(
+                        c, 0, -s,
+                        0, 1, 0,
+                        s, 0, c
+                    );
+                    L = glm::transpose(P) * L * P;
+
+                    V_all = V_all * P;
+
+                    float new_b = L[2][0];
+                    printf("");
+                }
+            }
+
+            glm::vec3 e0 = V_all[0];
+            glm::vec3 e1 = V_all[1];
+            glm::vec3 e2 = V_all[2];
+            DrawArrow({ 0,0,0 }, e0, 0.01f, { 255,0,255 });
+            DrawArrow({ 0,0,0 }, e1, 0.01f, { 255,255,0 });
+            DrawArrow({ 0,0,0 }, e2, 0.01f, { 0,255,255 });
+        }
+
         PopGraphicState();
         EndCamera();
 
@@ -236,6 +335,9 @@ int main() {
 
         ImGui::SliderFloat("fov", &camera.fovy, 0, 0.1);
         ImGui::Text("cam d %f", glm::length(camera.origin));
+
+        ImGui::InputInt("nJacobiItr", &nJacobiItr);
+        nJacobiItr = std::max(nJacobiItr, 0);
 
         ImGui::End();
 
