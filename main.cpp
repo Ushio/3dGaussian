@@ -94,7 +94,7 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
-void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration )
+void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration, float eps_nondiag = 1.0e-15f )
 {
     float A_00 = M[0][0];
     float A_01 = M[1][0];
@@ -114,12 +114,11 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
         *c = cosTheta;
     };
 
-    const float eps = 1.0e-15f;
     for (int i = 0; i < nIteration; i++)
     {
-        bool A_not_converged = eps < glm::abs(A_12);
-        bool B_not_converged = eps < glm::abs(A_01);
-        bool C_not_converged = eps < glm::abs(A_02);
+        bool A_not_converged = eps_nondiag < glm::abs(A_12);
+        bool B_not_converged = eps_nondiag < glm::abs(A_01);
+        bool C_not_converged = eps_nondiag < glm::abs(A_02);
         if( A_not_converged == false && B_not_converged == false && C_not_converged == false )
         {
             break;
