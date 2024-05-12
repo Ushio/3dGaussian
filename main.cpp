@@ -94,8 +94,229 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
+void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration = 4 )
+{
+    float A_00 = M[0][0];
+    float A_01 = M[1][0];
+    float A_02 = M[2][0];
+    float A_11 = M[1][1];
+    float A_12 = M[2][1];
+    float A_22 = M[2][2];
+
+    glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
+
+    auto sincos_of = [](float* s, float* c, float invTan2Theta)
+    {
+        float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
+        float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
+        float sinTheta = tanTheta * cosTheta;
+        *s = sinTheta;
+        *c = cosTheta;
+    };
+
+    const float eps = 1.0e-15f;
+    for (int i = 0; i < nIteration; i++)
+    {
+        {
+            float b = A_12;
+            float a = A_11;
+            float d = A_22;
+
+            if (eps < glm::abs(b))
+            {
+                float c;
+                float s;
+                float invTan2Theta = 0.5f * (d - a) / b;
+                sincos_of(&s, &c, invTan2Theta);
+
+                //glm::mat3 P = glm::mat3(
+                //    1, 0, 0,
+                //    0, c, -s,
+                //    0, s, c
+                //);
+
+                for (int j = 0; j < 2; j++)
+                {
+                    float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
+                    float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
+                    wbasisXY[j].y = y;
+                    wbasisXY[j].z = z;
+                }
+
+                float nA_01 = c * A_01 - s * A_02;
+                float nA_02 = c * A_02 + s * A_01;
+                float nA_11 = c * (c * A_11 - s * A_12) - s * (c * A_12 - s * A_22);
+                float nA_12 = 0.0f; // focus
+                float nA_22 = s * (c * A_12 + s * A_11) + c * (c * A_22 + s * A_12);
+                A_01 = nA_01;
+                A_02 = nA_02;
+                A_11 = nA_11;
+                A_12 = nA_12;
+                A_22 = nA_22;
+                //printf("%f\n", L[1][0] - nA_01);
+                //printf("%f\n", L[2][0] - nA_02);
+                //printf("%f\n", L[1][1] - nA_11);
+                //printf("%f\n", L[2][2] - nA_22);
+            }
+        }
+
+        {
+            float b = A_01;
+            float a = A_00;
+            float d = A_11;
+            if (eps < glm::abs(b))
+            {
+                float c;
+                float s;
+                float invTan2Theta = 0.5f * (d - a) / b;
+                sincos_of(&s, &c, invTan2Theta);
+
+                //glm::mat3 P = glm::mat3(
+                //    c, -s, 0,
+                //    s, c, 0,
+                //    0, 0, 1
+                //);
+
+                for (int j = 0; j < 2; j++)
+                {
+                    float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
+                    float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
+                    wbasisXY[j].x = x;
+                    wbasisXY[j].y = y;
+                }
+
+                float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
+                float nA_01 = 0.0f; // focus
+                float nA_02 = c * A_02 - s * A_12;
+                float nA_11 = s * (c * A_01 + s * A_00) + c * (c * A_11 + s * A_01);
+                float nA_12 = c * A_12 + s * A_02;
+                A_00 = nA_00;
+                A_01 = nA_01;
+                A_02 = nA_02;
+                A_11 = nA_11;
+                A_12 = nA_12;
+                //printf("%f\n", L[0][0] - nA_00);
+                //printf("%f\n", L[1][0] - nA_01);
+                //printf("%f\n", L[2][0] - nA_02);
+                //printf("%f\n", L[1][1] - nA_11);
+                //printf("%f\n", L[2][1] - nA_12);
+            }
+        }
+
+        {
+            float b = A_02;
+            float a = A_00;
+            float d = A_22;
+            if (eps < glm::abs(b))
+            {
+                float c;
+                float s;
+                float invTan2Theta = 0.5f * (d - a) / b;
+                sincos_of(&s, &c, invTan2Theta);
+
+                //glm::mat3 P = glm::mat3(
+                //    c, 0, -s,
+                //    0, 1, 0,
+                //    s, 0, c
+                //);
+
+                for (int j = 0; j < 2; j++)
+                {
+                    float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
+                    float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
+                    wbasisXY[j].x = x;
+                    wbasisXY[j].z = z;
+                }
+
+                float nA_00 = c * (c * A_00 - s * A_02) - s * (c * A_02 - s * A_22);
+                float nA_01 = c * A_01 - s * A_12;
+                float nA_02 = 0.0f; // focus
+                float nA_12 = c * A_12 + s * A_01;
+                float nA_22 = s * (c * A_02 + s * A_00) + c * (c * A_22 + s * A_02);
+                A_00 = nA_00;
+                A_01 = nA_01;
+                A_02 = nA_02;
+                A_12 = nA_12;
+                A_22 = nA_22;
+                //printf("%f\n", L[0][0] - nA_00);
+                //printf("%f\n", L[1][0] - nA_01);
+                //printf("%f\n", L[2][0] - nA_02);
+                //printf("%f\n", L[2][1] - nA_12);
+                //printf("%f\n", L[2][2] - nA_22);
+            }
+        }
+    }
+
+    glm::vec3 wbasisZ = glm::cross(wbasisXY[0], wbasisXY[1]);
+    lambdas[0] = A_00;
+    lambdas[1] = A_11;
+    lambdas[2] = A_22;
+    es[0] = { wbasisXY[0].x, wbasisXY[1].x, wbasisZ.x };
+    es[1] = { wbasisXY[0].y, wbasisXY[1].y, wbasisZ.y };
+    es[2] = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
+}
+
 int main() {
     using namespace pr;
+
+    // simple tests
+    Xoshiro128StarStar random;
+    for (int i = 0; i < 10000; i++)
+    {
+        glm::vec3 U = {
+            glm::mix( -100.0f, 100.0f, random.uniformf() ),
+            glm::mix( -100.0f, 100.0f, random.uniformf() ),
+            glm::mix( -100.0f, 100.0f, random.uniformf() ),
+        };
+        glm::vec3 V = {
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+        };
+        glm::vec3 W = {
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+            glm::mix(-100.0f, 100.0f, random.uniformf()),
+        };
+
+        {
+            glm::vec3 N = glm::cross(U, V);
+            V = glm::normalize(glm::cross(N, U)) * glm::length(V);
+            W = glm::normalize(N) * glm::length(W);
+        }
+
+        glm::mat3 R = glm::mat3(glm::normalize(U), glm::normalize(V), glm::normalize(W));
+        glm::mat3 L = glm::mat3(
+            lengthSquared(U), 0, 0,
+            0, lengthSquared(V), 0,
+            0, 0, lengthSquared(W)
+        );
+        glm::mat3 cov = R * L * glm::transpose(R);
+
+        float lambdas[3];
+        glm::vec3 es[3];
+        eigen_decompress(es, lambdas, cov, 16);
+
+        PR_ASSERT(glm::abs(glm::dot(es[0], es[1])) < 1.0e-6f);
+        PR_ASSERT(glm::abs(glm::dot(es[1], es[2])) < 1.0e-6f);
+        PR_ASSERT(glm::abs(glm::dot(es[2], es[0])) < 1.0e-6f);
+
+        float S_eigen_ref = ss_min(ss_min(L[0][0], L[1][1]), L[2][2]);
+        float L_eigen_ref = ss_max(ss_max(L[0][0], L[1][1]), L[2][2]);
+        float S_eigen = ss_min(ss_min(lambdas[0], lambdas[1]), lambdas[2]);
+        float L_eigen = ss_max(ss_max(lambdas[0], lambdas[1]), lambdas[2]);
+        float eps0 = FLT_EPSILON * S_eigen_ref * 256.0f;
+        float eps1 = FLT_EPSILON * L_eigen_ref * 256.0f;
+        PR_ASSERT( glm::abs( S_eigen - S_eigen_ref ) < eps0);
+        PR_ASSERT( glm::abs( L_eigen - L_eigen_ref ) < eps1);
+
+        float det = glm::determinant(cov);
+        PR_ASSERT(glm::abs(lambdas[0] * lambdas[1] * lambdas[2] - det ) < FLT_EPSILON * det * 256.0f);
+
+        float meanTr = (cov[0][0] + cov[1][1] + cov[2][2]) / 3.0f;
+        float meanLambda = (lambdas[0] + lambdas[1] + lambdas[2]) / 3.0f;
+        PR_ASSERT(glm::abs(meanTr - meanLambda) < FLT_EPSILON * meanLambda * 8.0f);
+    }
 
     SetDataDir(ExecutableDir());
 
@@ -229,179 +450,190 @@ int main() {
         }
 
         static int nJacobiItr = 3;
+
+        float lambdas[3];
+        glm::vec3 es[3];
+        eigen_decompress(es, lambdas, cov, nJacobiItr);
+        DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
+        DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
+        DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
+        DrawLine(-es[0] * std::sqrt(lambdas[0]), es[0] * std::sqrt(lambdas[0]), { 255,0,255 });
+        DrawLine(-es[1] * std::sqrt(lambdas[1]), es[1] * std::sqrt(lambdas[1]), { 255,255,0 });
+        DrawLine(-es[2] * std::sqrt(lambdas[2]), es[2] * std::sqrt(lambdas[2]), { 0,255,255 });
+
         // naiive 
-        {
-            //glm::mat3 V_all = glm::identity<glm::mat3>();
-            float A_00 = cov[0][0];
-            float A_01 = cov[1][0];
-            float A_02 = cov[2][0];
-            float A_11 = cov[1][1];
-            float A_12 = cov[2][1];
-            float A_22 = cov[2][2];
+        //{
+        //    //glm::mat3 V_all = glm::identity<glm::mat3>();
+        //    float A_00 = cov[0][0];
+        //    float A_01 = cov[1][0];
+        //    float A_02 = cov[2][0];
+        //    float A_11 = cov[1][1];
+        //    float A_12 = cov[2][1];
+        //    float A_22 = cov[2][2];
 
-            glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
+        //    glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
-            auto sincos_of = []( float *s, float *c, float invTan2Theta )
-            {
-                float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
-                float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
-                float sinTheta = tanTheta * cosTheta;
-                *s = sinTheta;
-                *c = cosTheta;
-            };
+        //    auto sincos_of = []( float *s, float *c, float invTan2Theta )
+        //    {
+        //        float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
+        //        float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
+        //        float sinTheta = tanTheta * cosTheta;
+        //        *s = sinTheta;
+        //        *c = cosTheta;
+        //    };
 
-            const float eps = 1.0e-15f;
-            for (int i = 0; i < nJacobiItr; i++)
-            {
-                {
-                    float b = A_12;
-                    float a = A_11;
-                    float d = A_22;
+        //    const float eps = 1.0e-15f;
+        //    for (int i = 0; i < nJacobiItr; i++)
+        //    {
+        //        {
+        //            float b = A_12;
+        //            float a = A_11;
+        //            float d = A_22;
 
-                    if( eps < glm::abs( b ) )
-                    {
-                        float c;
-                        float s;
-                        float invTan2Theta = 0.5f * ( d - a ) / b;
-                        sincos_of( &s, &c, invTan2Theta );
+        //            if( eps < glm::abs( b ) )
+        //            {
+        //                float c;
+        //                float s;
+        //                float invTan2Theta = 0.5f * ( d - a ) / b;
+        //                sincos_of( &s, &c, invTan2Theta );
 
-                        //glm::mat3 P = glm::mat3(
-                        //    1, 0, 0,
-                        //    0, c, -s,
-                        //    0, s, c
-                        //);
+        //                //glm::mat3 P = glm::mat3(
+        //                //    1, 0, 0,
+        //                //    0, c, -s,
+        //                //    0, s, c
+        //                //);
 
-                        for (int j = 0; j < 2; j++)
-                        {
-                            float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
-                            float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
-                            wbasisXY[j].y = y;
-                            wbasisXY[j].z = z;
-                        }
+        //                for (int j = 0; j < 2; j++)
+        //                {
+        //                    float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
+        //                    float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
+        //                    wbasisXY[j].y = y;
+        //                    wbasisXY[j].z = z;
+        //                }
 
-                        float nA_01 = c * A_01 - s * A_02;
-                        float nA_02 = c * A_02 + s * A_01;
-                        float nA_11 = c * ( c * A_11 - s * A_12 ) - s * ( c * A_12 - s * A_22 );
-                        float nA_12 = 0.0f; // focus
-                        float nA_22 = s * ( c * A_12 + s * A_11 ) + c * ( c * A_22 + s * A_12 );
-                        A_01 = nA_01;
-                        A_02 = nA_02;
-                        A_11 = nA_11;
-                        A_12 = nA_12;
-                        A_22 = nA_22;
-                        //printf("%f\n", L[1][0] - nA_01);
-                        //printf("%f\n", L[2][0] - nA_02);
-                        //printf("%f\n", L[1][1] - nA_11);
-                        //printf("%f\n", L[2][2] - nA_22);
-                    }
-                }
+        //                float nA_01 = c * A_01 - s * A_02;
+        //                float nA_02 = c * A_02 + s * A_01;
+        //                float nA_11 = c * ( c * A_11 - s * A_12 ) - s * ( c * A_12 - s * A_22 );
+        //                float nA_12 = 0.0f; // focus
+        //                float nA_22 = s * ( c * A_12 + s * A_11 ) + c * ( c * A_22 + s * A_12 );
+        //                A_01 = nA_01;
+        //                A_02 = nA_02;
+        //                A_11 = nA_11;
+        //                A_12 = nA_12;
+        //                A_22 = nA_22;
+        //                //printf("%f\n", L[1][0] - nA_01);
+        //                //printf("%f\n", L[2][0] - nA_02);
+        //                //printf("%f\n", L[1][1] - nA_11);
+        //                //printf("%f\n", L[2][2] - nA_22);
+        //            }
+        //        }
 
-                {
-                    float b = A_01;
-                    float a = A_00;
-                    float d = A_11;
-                    if (eps < glm::abs(b))
-                    {
-                        float c;
-                        float s;
-                        float invTan2Theta = 0.5f * (d - a) / b;
-                        sincos_of(&s, &c, invTan2Theta);
+        //        {
+        //            float b = A_01;
+        //            float a = A_00;
+        //            float d = A_11;
+        //            if (eps < glm::abs(b))
+        //            {
+        //                float c;
+        //                float s;
+        //                float invTan2Theta = 0.5f * (d - a) / b;
+        //                sincos_of(&s, &c, invTan2Theta);
 
-                        //glm::mat3 P = glm::mat3(
-                        //    c, -s, 0,
-                        //    s, c, 0,
-                        //    0, 0, 1
-                        //);
+        //                //glm::mat3 P = glm::mat3(
+        //                //    c, -s, 0,
+        //                //    s, c, 0,
+        //                //    0, 0, 1
+        //                //);
 
-                        for (int j = 0; j < 2; j++)
-                        {
-                            float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
-                            float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
-                            wbasisXY[j].x = x;
-                            wbasisXY[j].y = y;
-                        }
+        //                for (int j = 0; j < 2; j++)
+        //                {
+        //                    float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
+        //                    float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
+        //                    wbasisXY[j].x = x;
+        //                    wbasisXY[j].y = y;
+        //                }
 
-                        float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
-                        float nA_01 = 0.0f; // focus
-                        float nA_02 = c * A_02 - s * A_12;
-                        float nA_11 = s * (c * A_01 + s * A_00) + c * (c * A_11 + s * A_01);
-                        float nA_12 = c * A_12 + s * A_02;
-                        A_00 = nA_00;
-                        A_01 = nA_01;
-                        A_02 = nA_02;
-                        A_11 = nA_11;
-                        A_12 = nA_12;
-                        //printf("%f\n", L[0][0] - nA_00);
-                        //printf("%f\n", L[1][0] - nA_01);
-                        //printf("%f\n", L[2][0] - nA_02);
-                        //printf("%f\n", L[1][1] - nA_11);
-                        //printf("%f\n", L[2][1] - nA_12);
-                    }
-                }
+        //                float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
+        //                float nA_01 = 0.0f; // focus
+        //                float nA_02 = c * A_02 - s * A_12;
+        //                float nA_11 = s * (c * A_01 + s * A_00) + c * (c * A_11 + s * A_01);
+        //                float nA_12 = c * A_12 + s * A_02;
+        //                A_00 = nA_00;
+        //                A_01 = nA_01;
+        //                A_02 = nA_02;
+        //                A_11 = nA_11;
+        //                A_12 = nA_12;
+        //                //printf("%f\n", L[0][0] - nA_00);
+        //                //printf("%f\n", L[1][0] - nA_01);
+        //                //printf("%f\n", L[2][0] - nA_02);
+        //                //printf("%f\n", L[1][1] - nA_11);
+        //                //printf("%f\n", L[2][1] - nA_12);
+        //            }
+        //        }
 
-                {
-                    float b = A_02;
-                    float a = A_00;
-                    float d = A_22;
-                    if (eps < glm::abs(b))
-                    {
-                        float c;
-                        float s;
-                        float invTan2Theta = 0.5f * (d - a) / b;
-                        sincos_of(&s, &c, invTan2Theta);
+        //        {
+        //            float b = A_02;
+        //            float a = A_00;
+        //            float d = A_22;
+        //            if (eps < glm::abs(b))
+        //            {
+        //                float c;
+        //                float s;
+        //                float invTan2Theta = 0.5f * (d - a) / b;
+        //                sincos_of(&s, &c, invTan2Theta);
 
-                        //glm::mat3 P = glm::mat3(
-                        //    c, 0, -s,
-                        //    0, 1, 0,
-                        //    s, 0, c
-                        //);
+        //                //glm::mat3 P = glm::mat3(
+        //                //    c, 0, -s,
+        //                //    0, 1, 0,
+        //                //    s, 0, c
+        //                //);
 
-                        for (int j = 0; j < 2; j++)
-                        {
-                            float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
-                            float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
-                            wbasisXY[j].x = x;
-                            wbasisXY[j].z = z;
-                        }
+        //                for (int j = 0; j < 2; j++)
+        //                {
+        //                    float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
+        //                    float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
+        //                    wbasisXY[j].x = x;
+        //                    wbasisXY[j].z = z;
+        //                }
 
-                        float nA_00 = c * ( c * A_00 - s * A_02 ) - s * ( c * A_02 - s * A_22 );
-                        float nA_01 = c * A_01 - s * A_12;
-                        float nA_02 = 0.0f; // focus
-                        float nA_12 = c * A_12 + s * A_01;
-                        float nA_22 = s * ( c * A_02 + s * A_00 ) + c * ( c * A_22 + s * A_02 );
-                        A_00 = nA_00;
-                        A_01 = nA_01;
-                        A_02 = nA_02;
-                        A_12 = nA_12;
-                        A_22 = nA_22;
-                        //printf("%f\n", L[0][0] - nA_00);
-                        //printf("%f\n", L[1][0] - nA_01);
-                        //printf("%f\n", L[2][0] - nA_02);
-                        //printf("%f\n", L[2][1] - nA_12);
-                        //printf("%f\n", L[2][2] - nA_22);
-                    }
-                }
-            }
+        //                float nA_00 = c * ( c * A_00 - s * A_02 ) - s * ( c * A_02 - s * A_22 );
+        //                float nA_01 = c * A_01 - s * A_12;
+        //                float nA_02 = 0.0f; // focus
+        //                float nA_12 = c * A_12 + s * A_01;
+        //                float nA_22 = s * ( c * A_02 + s * A_00 ) + c * ( c * A_22 + s * A_02 );
+        //                A_00 = nA_00;
+        //                A_01 = nA_01;
+        //                A_02 = nA_02;
+        //                A_12 = nA_12;
+        //                A_22 = nA_22;
+        //                //printf("%f\n", L[0][0] - nA_00);
+        //                //printf("%f\n", L[1][0] - nA_01);
+        //                //printf("%f\n", L[2][0] - nA_02);
+        //                //printf("%f\n", L[2][1] - nA_12);
+        //                //printf("%f\n", L[2][2] - nA_22);
+        //            }
+        //        }
+        //    }
 
-            //DrawArrow({ 0,0,0 }, eigen0, 0.01f, { 255,0,255 });
-            //DrawArrow({ 0,0,0 }, eigen1, 0.01f, { 255,255,0 });
-            //DrawArrow({ 0,0,0 }, eigen2, 0.01f, { 0,255,255 });
-            //DrawArrow({ 0,0,0 }, eigen0 * std::sqrt(A_00), 0.01f, { 255,0,255 });
-            //DrawArrow({ 0,0,0 }, eigen1 * std::sqrt(A_11), 0.01f, { 255,255,0 });
-            //DrawArrow({ 0,0,0 }, eigen2 * std::sqrt(A_22), 0.01f, { 0,255,255 });
+        //    //DrawArrow({ 0,0,0 }, eigen0, 0.01f, { 255,0,255 });
+        //    //DrawArrow({ 0,0,0 }, eigen1, 0.01f, { 255,255,0 });
+        //    //DrawArrow({ 0,0,0 }, eigen2, 0.01f, { 0,255,255 });
+        //    //DrawArrow({ 0,0,0 }, eigen0 * std::sqrt(A_00), 0.01f, { 255,0,255 });
+        //    //DrawArrow({ 0,0,0 }, eigen1 * std::sqrt(A_11), 0.01f, { 255,255,0 });
+        //    //DrawArrow({ 0,0,0 }, eigen2 * std::sqrt(A_22), 0.01f, { 0,255,255 });
 
-            glm::vec3 wbasisZ = glm::cross(wbasisXY[0], wbasisXY[1]);
-            glm::vec3 e0 = { wbasisXY[0].x, wbasisXY[1].x, wbasisZ.x };
-            glm::vec3 e1 = { wbasisXY[0].y, wbasisXY[1].y, wbasisZ.y };
-            glm::vec3 e2 = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
+        //    glm::vec3 wbasisZ = glm::cross(wbasisXY[0], wbasisXY[1]);
+        //    glm::vec3 e0 = { wbasisXY[0].x, wbasisXY[1].x, wbasisZ.x };
+        //    glm::vec3 e1 = { wbasisXY[0].y, wbasisXY[1].y, wbasisZ.y };
+        //    glm::vec3 e2 = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
 
-            DrawArrow({ 0,0,0 }, e0, 0.01f, { 255,0,255 });
-            DrawArrow({ 0,0,0 }, e1, 0.01f, { 255,255,0 });
-            DrawArrow({ 0,0,0 }, e2, 0.01f, { 0,255,255 });
-            DrawLine(-e0 * std::sqrt(A_00), e0 * std::sqrt(A_00), { 255,0,255 });
-            DrawLine(-e1 * std::sqrt(A_11), e1 * std::sqrt(A_11), { 255,255,0 });
-            DrawLine(-e2 * std::sqrt(A_22), e2 * std::sqrt(A_22), { 0,255,255 });
-        }
+        //    DrawArrow({ 0,0,0 }, e0, 0.01f, { 255,0,255 });
+        //    DrawArrow({ 0,0,0 }, e1, 0.01f, { 255,255,0 });
+        //    DrawArrow({ 0,0,0 }, e2, 0.01f, { 0,255,255 });
+        //    DrawLine(-e0 * std::sqrt(A_00), e0 * std::sqrt(A_00), { 255,0,255 });
+        //    DrawLine(-e1 * std::sqrt(A_11), e1 * std::sqrt(A_11), { 255,255,0 });
+        //    DrawLine(-e2 * std::sqrt(A_22), e2 * std::sqrt(A_22), { 0,255,255 });
+        //}
 
         PopGraphicState();
         EndCamera();
