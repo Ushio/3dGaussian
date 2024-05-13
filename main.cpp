@@ -138,10 +138,10 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
 
                 for (int j = 0; j < 2; j++)
                 {
-                    float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
-                    float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
-                    wbasisXY[j].y = y;
-                    wbasisXY[j].z = z;
+                    float Y = wbasisXY[j].y;
+                    float Z = wbasisXY[j].z;
+                    wbasisXY[j].y = c * Y - s * Z;
+                    wbasisXY[j].z = s * Y + c * Z;
                 }
 
                 float nA_01 = c * A_01 /* - s * A_02*/;
@@ -187,10 +187,10 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
 
                 for (int j = 0; j < 2; j++)
                 {
-                    float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
-                    float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
-                    wbasisXY[j].x = x;
-                    wbasisXY[j].y = y;
+                    float X = wbasisXY[j].x;
+                    float Y = wbasisXY[j].y;
+                    wbasisXY[j].x = c * X - s * Y;
+                    wbasisXY[j].y = s * X + c * Y;
                 }
 
                 float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
@@ -229,10 +229,10 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
 
                 for (int j = 0; j < 2; j++)
                 {
-                    float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
-                    float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
-                    wbasisXY[j].x = x;
-                    wbasisXY[j].z = z;
+                    float X = wbasisXY[j].x;
+                    float Z = wbasisXY[j].z;
+                    wbasisXY[j].x = c * X - s * Z;
+                    wbasisXY[j].z = s * X + c * Z;
                 }
 
                 float nA_00 = c * (c * A_00 - s * A_02) - s * (c * A_02 - s * A_22);
