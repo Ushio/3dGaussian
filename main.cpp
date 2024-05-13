@@ -116,8 +116,6 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
 
     for (int i = 0; i < nIteration; i++)
     {
-        int nConverged = 0;
-
         {
             float b = A_12;
             float a = A_11;
@@ -161,10 +159,13 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_11 = nA_11;
                 A_12 = nA_12;
                 A_22 = nA_22;
-            }
-            else
-            {
-                nConverged++;
+
+                // Converged when the smallest diag can not get affected from the largest non-diag
+                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
+                if (minDiag + ss_max(glm::abs(A_02), glm::abs(A_01)) == minDiag)
+                {
+                    break;
+                }
             }
         }
 
@@ -203,10 +204,13 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_02 = nA_02;
                 A_11 = nA_11;
                 A_12 = nA_12;
-            }
-            else
-            {
-                nConverged++;
+
+                // Converged when the smallest diag can not get affected from the largest non-diag
+                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
+                if (minDiag + ss_max(glm::abs(A_02), glm::abs(A_12)) == minDiag)
+                {
+                    break;
+                }
             }
         }
 
@@ -245,16 +249,14 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
                 A_02 = nA_02;
                 A_12 = nA_12;
                 A_22 = nA_22;
-            }
-            else
-            {
-                nConverged++;
-            }
-        }
 
-        if ( 3 <= nConverged )
-        {
-            break;
+                // Converged when the smallest diag can not get affected from the largest non-diag
+                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
+                if (minDiag + ss_max(glm::abs(A_12), glm::abs(A_01)) == minDiag)
+                {
+                    break;
+                }
+            }
         }
     }
 
