@@ -94,7 +94,7 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
-void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIteration, float eps_nondiag = 1.0e-15f )
+void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
 {
     float A_00 = M[0][0];
     float A_01 = M[1][0];
@@ -113,8 +113,8 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M, int nIter
         *s = sinTheta;
         *c = cosTheta;
     };
-
-    for (int i = 0; i < nIteration; i++)
+    const float eps_nondiag = 1.0e-15f;
+    for (int i = 0; i < 32; i++)
     {
         {
             float b = A_12;
@@ -308,7 +308,7 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov, 16);
+        eigen_decompress(es, lambdas, cov);
 
         PR_ASSERT(glm::abs(glm::dot(es[0], es[1])) < 1.0e-6f);
         PR_ASSERT(glm::abs(glm::dot(es[1], es[2])) < 1.0e-6f);
@@ -462,11 +462,9 @@ int main() {
             DrawEllipse(W * depth, U * kPrime, V * kPrime, { 128 , 128 , 128 }, 64);
         }
 
-        static int nJacobiItr = 3;
-
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov, nJacobiItr);
+        eigen_decompress(es, lambdas, cov);
         DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
         DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
         DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
@@ -659,9 +657,6 @@ int main() {
 
         ImGui::SliderFloat("fov", &camera.fovy, 0, 0.1);
         ImGui::Text("cam d %f", glm::length(camera.origin));
-
-        ImGui::InputInt("nJacobiItr", &nJacobiItr);
-        nJacobiItr = std::max(nJacobiItr, 0);
 
         ImGui::End();
 
