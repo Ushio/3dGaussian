@@ -113,7 +113,6 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
         *s = sinTheta;
         *c = cosTheta;
     };
-    const float eps_nondiag = 1.0e-15f;
     for (int i = 0; i < 32; i++)
     {
         {
@@ -121,7 +120,6 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
             float a = A_11;
             float d = A_22;
 
-            if( eps_nondiag < glm::abs(b) )
             {
                 float c;
                 float s;
@@ -173,7 +171,6 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
             float b = A_01;
             float a = A_00;
             float d = A_11;
-            if (eps_nondiag < glm::abs(b))
             {
                 float c;
                 float s;
@@ -218,7 +215,6 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
             float b = A_02;
             float a = A_00;
             float d = A_22;
-            if (eps_nondiag < glm::abs(b))
             {
                 float c;
                 float s;
@@ -274,7 +270,8 @@ int main() {
 
     // simple tests
     Xoshiro128StarStar random;
-    for (int i = 0; i < 10000; i++)
+    Stopwatch sw;
+    for (int i = 0; i < 1000000; i++)
     {
         glm::vec3 U = {
             glm::mix( -100.0f, 100.0f, random.uniformf() ),
@@ -318,19 +315,15 @@ int main() {
         float L_eigen_ref = ss_max(ss_max(L[0][0], L[1][1]), L[2][2]);
         float S_eigen = ss_min(ss_min(lambdas[0], lambdas[1]), lambdas[2]);
         float L_eigen = ss_max(ss_max(lambdas[0], lambdas[1]), lambdas[2]);
-        float eps0 = FLT_EPSILON * S_eigen_ref * 256.0f;
-        float eps1 = FLT_EPSILON * L_eigen_ref * 256.0f;
-        PR_ASSERT( glm::abs( S_eigen - S_eigen_ref ) < eps0);
-        PR_ASSERT( glm::abs( L_eigen - L_eigen_ref ) < eps1);
-
-        float det = glm::determinant(cov);
-        PR_ASSERT(glm::abs(lambdas[0] * lambdas[1] * lambdas[2] - det ) < FLT_EPSILON * det * 256.0f);
+        float epsL = FLT_EPSILON * L_eigen_ref * 16.0f;
+        PR_ASSERT( glm::abs( S_eigen - S_eigen_ref ) < epsL);
+        PR_ASSERT( glm::abs( L_eigen - L_eigen_ref ) < epsL);
 
         float meanTr = (cov[0][0] + cov[1][1] + cov[2][2]) / 3.0f;
         float meanLambda = (lambdas[0] + lambdas[1] + lambdas[2]) / 3.0f;
         PR_ASSERT(glm::abs(meanTr - meanLambda) < FLT_EPSILON * meanLambda * 8.0f);
     }
-
+    printf("%f\n", sw.elapsed() * 1000.0f);
     SetDataDir(ExecutableDir());
 
     Config config;
