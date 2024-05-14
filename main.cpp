@@ -94,15 +94,8 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
-void eigen_decompress( glm::vec3 es[3], float lambdas[3], glm::mat3 M )
+void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01, float A_02, float A_11, float A_12, float A_22 )
 {
-    float A_00 = M[0][0];
-    float A_01 = M[1][0];
-    float A_02 = M[2][0];
-    float A_11 = M[1][1];
-    float A_12 = M[2][1];
-    float A_22 = M[2][2];
-
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
     auto sincos_of = [](float* s, float* c, float invTan2Theta)
@@ -305,7 +298,7 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov);
+        eigen_decompress(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
 
         PR_ASSERT(glm::abs(glm::dot(es[0], es[1])) < 1.0e-6f);
         PR_ASSERT(glm::abs(glm::dot(es[1], es[2])) < 1.0e-6f);
@@ -457,7 +450,7 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov);
+        eigen_decompress(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
         DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
         DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
         DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
