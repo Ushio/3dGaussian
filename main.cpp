@@ -319,7 +319,7 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+        eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
 
         PR_ASSERT(glm::abs(glm::dot(es[0], es[1])) < 1.0e-6f);
         PR_ASSERT(glm::abs(glm::dot(es[1], es[2])) < 1.0e-6f);
@@ -471,7 +471,7 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decompress(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+        eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
         DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
         DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
         DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
