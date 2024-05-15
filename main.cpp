@@ -99,11 +99,11 @@ inline float ss_sqrt(float x) {
     _mm_store_ss(&y, _mm_sqrt_ss(_mm_load_ss(&x))); 
     return y; 
 }
-void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01, float A_02, float A_11, float A_12, float A_22 )
+void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A_01, float A_02, float A_11, float A_12, float A_22 )
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
-    auto sincos_of = [](float* s, float* c, float *t, float invTan2Theta)
+    auto sincostan_of = [](float* s, float* c, float *t, float invTan2Theta)
     {
         float tanTheta = 1.0f / (sign_of(invTan2Theta) * ss_sqrt(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
         float cosTheta = 1.0f / ss_sqrt(1.0f + tanTheta * tanTheta);
@@ -127,7 +127,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                 float s;
                 float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, &t, invTan2Theta);
+                sincostan_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    1, 0, 0,
@@ -183,7 +183,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                 float s;
                 float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, &t, invTan2Theta);
+                sincostan_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, -s, 0,
@@ -231,7 +231,7 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                 float s;
                 float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, &t, invTan2Theta);
+                sincostan_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, 0, -s,
