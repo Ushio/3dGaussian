@@ -324,7 +324,7 @@ int main() {
         float L_eigen_ref = ss_max(ss_max(L[0][0], L[1][1]), L[2][2]);
         float S_eigen = ss_min(ss_min(lambdas[0], lambdas[1]), lambdas[2]);
         float L_eigen = ss_max(ss_max(lambdas[0], lambdas[1]), lambdas[2]);
-        float epsL = FLT_EPSILON * L_eigen_ref * 16.0f;
+        float epsL = FLT_EPSILON * L_eigen_ref * 8.0f;
         PR_ASSERT( glm::abs( S_eigen - S_eigen_ref ) < epsL);
         PR_ASSERT( glm::abs( L_eigen - L_eigen_ref ) < epsL);
 
