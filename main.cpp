@@ -98,14 +98,17 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
-    auto sincos_of = [](float* s, float* c, float invTan2Theta)
+    auto sincos_of = [](float* s, float* c, float *t, float invTan2Theta)
     {
         float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
         float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
         float sinTheta = tanTheta * cosTheta;
         *s = sinTheta;
         *c = cosTheta;
+        *t = tanTheta;
     };
+
+    const float b_eps = 1.0e-15f;
     for (int i = 0; i < 32; i++)
     {
         {
@@ -113,11 +116,13 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
             float a = A_11;
             float d = A_22;
 
+            if( b_eps < glm::abs(b) )
             {
                 float c;
                 float s;
+                float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, invTan2Theta);
+                sincos_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    1, 0, 0,
@@ -142,9 +147,11 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                     nA_02 += c * A_02;
                 }
 
-                float nA_11 = c * (c * A_11 - s * A_12) - s * (c * A_12 - s * A_22);
+                // simplified via nA_12 == 0
+                float nA_11 = A_11 - t * A_12;
+                float nA_22 = A_22 + t * A_12;
+
                 float nA_12 = 0.0f; // focus
-                float nA_22 = s * (c * A_12 + s * A_11) + c * (c * A_22 + s * A_12);
                 A_01 = nA_01;
                 A_02 = nA_02;
                 A_11 = nA_11;
@@ -164,11 +171,14 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
             float b = A_01;
             float a = A_00;
             float d = A_11;
+
+            if( b_eps < glm::abs(b) )
             {
                 float c;
                 float s;
+                float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, invTan2Theta);
+                sincos_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, -s, 0,
@@ -184,10 +194,12 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                     wbasisXY[j].y = s * X + c * Y;
                 }
 
-                float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
+                // simplified via nA_12 == 0
+                float nA_00 = A_00 - t * A_01;
+                float nA_11 = A_11 + t * A_01;
+
                 float nA_01 = 0.0f; // focus
                 float nA_02 = c * A_02 /*- s * A_12*/;
-                float nA_11 = s * (c * A_01 + s * A_00) + c * (c * A_11 + s * A_01);
                 float nA_12 = /* c * A_12 + */ s * A_02;
                 A_00 = nA_00;
                 A_01 = nA_01;
@@ -208,11 +220,13 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
             float b = A_02;
             float a = A_00;
             float d = A_22;
+            if( b_eps < glm::abs(b) )
             {
                 float c;
                 float s;
+                float t;
                 float invTan2Theta = 0.5f * (d - a) / b;
-                sincos_of(&s, &c, invTan2Theta);
+                sincos_of(&s, &c, &t, invTan2Theta);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, 0, -s,
@@ -228,11 +242,13 @@ void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01
                     wbasisXY[j].z = s * X + c * Z;
                 }
 
-                float nA_00 = c * (c * A_00 - s * A_02) - s * (c * A_02 - s * A_22);
+                // simplified via nA_12 == 0
+                float nA_00 = A_00 - t * A_02;
+                float nA_22 = A_22 + t * A_02;
+
                 float nA_01 = /* c * A_01 */ - s * A_12;
                 float nA_02 = 0.0f; // focus
                 float nA_12 = c * A_12 /* + s * A_01*/;
-                float nA_22 = s * (c * A_02 + s * A_00) + c * (c * A_22 + s * A_02);
                 A_00 = nA_00;
                 A_01 = nA_01;
                 A_02 = nA_02;
