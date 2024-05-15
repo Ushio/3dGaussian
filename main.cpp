@@ -94,14 +94,19 @@ void eigenVectors_of_symmetric(glm::vec2* eigen0, glm::vec2* eigen1, const glm::
     *eigen1 = e1;
 }
 
+inline float ss_sqrt(float x) {
+    float y; 
+    _mm_store_ss(&y, _mm_sqrt_ss(_mm_load_ss(&x))); 
+    return y; 
+}
 void eigen_decompress( glm::vec3 es[3], float lambdas[3], float A_00, float A_01, float A_02, float A_11, float A_12, float A_22 )
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
     auto sincos_of = [](float* s, float* c, float *t, float invTan2Theta)
     {
-        float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
-        float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
+        float tanTheta = 1.0f / (sign_of(invTan2Theta) * ss_sqrt(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
+        float cosTheta = 1.0f / ss_sqrt(1.0f + tanTheta * tanTheta);
         float sinTheta = tanTheta * cosTheta;
         *s = sinTheta;
         *c = cosTheta;
