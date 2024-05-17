@@ -99,6 +99,15 @@ inline float ss_sqrt(float x) {
     _mm_store_ss(&y, _mm_sqrt_ss(_mm_load_ss(&x))); 
     return y; 
 }
+
+float min_of_abs(float x, float y, float z)
+{
+    return ss_min(ss_min(glm::abs(x), glm::abs(y)), glm::abs(z));
+}
+float max_of_abs(float x, float y)
+{
+    return ss_max(glm::abs(x), glm::abs(y));
+}
 void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A_01, float A_02, float A_11, float A_12, float A_22 )
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
@@ -165,8 +174,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
 
 
                 // Converged when the smallest diag can not get affected from the largest non-diag
-                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
-                if (minDiag + ss_max(glm::abs(A_02), glm::abs(A_01)) == minDiag)
+                float minDiag = min_of_abs(A_00, A_11, A_22);
+                if (minDiag + max_of_abs(A_02, A_01) == minDiag)
                 {
                     break;
                 }
@@ -215,8 +224,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 A_12 = nA_12;
 
                 // Converged when the smallest diag can not get affected from the largest non-diag
-                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
-                if (minDiag + ss_max(glm::abs(A_02), glm::abs(A_12)) == minDiag)
+                float minDiag = min_of_abs(A_00, A_11, A_22);
+                if (minDiag + max_of_abs(A_02, A_12) == minDiag)
                 {
                     break;
                 }
@@ -265,8 +274,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
 
 
                 // Converged when the smallest diag can not get affected from the largest non-diag
-                float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
-                if (minDiag + ss_max(glm::abs(A_12), glm::abs(A_01)) == minDiag)
+                float minDiag = min_of_abs(A_00, A_11, A_22);
+                if (minDiag + max_of_abs(A_12, A_01) == minDiag)
                 {
                     break;
                 }
