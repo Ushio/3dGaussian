@@ -113,7 +113,6 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
         *t = tanTheta;
     };
 
-    const float b_eps = 1.0e-15f;
     for (int i = 0; i < 32; i++)
     {
         {
@@ -121,7 +120,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
             float a = A_11;
             float d = A_22;
 
-            if( b_eps < glm::abs(b) )
+            // b is small enough not to affect the next rotation
+            if( A_02 + b != A_02 )
             {
                 float c;
                 float s;
@@ -163,6 +163,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 A_12 = nA_12;
                 A_22 = nA_22;
 
+
                 // Converged when the smallest diag can not get affected from the largest non-diag
                 float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
                 if (minDiag + ss_max(glm::abs(A_02), glm::abs(A_01)) == minDiag)
@@ -177,7 +178,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
             float a = A_00;
             float d = A_11;
 
-            if( b_eps < glm::abs(b) )
+            // b is small enough not to affect the next rotation
+            if (A_12 + b != A_12)
             {
                 float c;
                 float s;
@@ -225,7 +227,8 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
             float b = A_02;
             float a = A_00;
             float d = A_22;
-            if( b_eps < glm::abs(b) )
+            // b is small enough not to affect the next rotation
+            if( A_01 + b != A_01 )
             {
                 float c;
                 float s;
@@ -259,6 +262,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 A_02 = nA_02;
                 A_12 = nA_12;
                 A_22 = nA_22;
+
 
                 // Converged when the smallest diag can not get affected from the largest non-diag
                 float minDiag = ss_min(ss_min(glm::abs(A_00), glm::abs(A_11)), glm::abs(A_22));
