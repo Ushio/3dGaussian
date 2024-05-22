@@ -112,14 +112,25 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
-    auto sincostan_of = [](float* s, float* c, float *t, float invTan2Theta)
-    {
-        float tanTheta = 1.0f / (sign_of(invTan2Theta) * ss_sqrt(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
-        float cosTheta = 1.0f / ss_sqrt(1.0f + tanTheta * tanTheta);
-        float sinTheta = tanTheta * cosTheta;
-        *s = sinTheta;
-        *c = cosTheta;
+    // it is invalid when cos2theta == sin2theta == 0
+    auto sincostan = []( float* s, float* c, float* t, float cos_2theta, float sin_2theta )
+    {                
+        float X = cos_2theta;
+        float Y = sin_2theta;
+        float YY = Y * Y;
+        float L = ss_sqrt(X * X + YY);
+
+        // The half vector
+        float hx = X + sign_of(X) * L;
+        float hy = Y;
+        float hyhy = YY;
+        float lh = ss_sqrt(hx * hx + hyhy);
+
+        float tanTheta = hy / hx;
+        float cosTheta = hx / lh;
         *t = tanTheta;
+        *c = cosTheta;
+        *s = cosTheta * tanTheta;
     };
 
     for (int i = 0; i < 32; i++)
@@ -135,8 +146,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 float c;
                 float s;
                 float t;
-                float invTan2Theta = 0.5f * (d - a) / b;
-                sincostan_of(&s, &c, &t, invTan2Theta);
+                sincostan( &s, &c, &t, 0.5f * (d - a), b );
 
                 //glm::mat3 P = glm::mat3(
                 //    1, 0, 0,
@@ -193,8 +203,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 float c;
                 float s;
                 float t;
-                float invTan2Theta = 0.5f * (d - a) / b;
-                sincostan_of(&s, &c, &t, invTan2Theta);
+                sincostan(&s, &c, &t, 0.5f * (d - a), b);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, -s, 0,
@@ -242,8 +251,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
                 float c;
                 float s;
                 float t;
-                float invTan2Theta = 0.5f * (d - a) / b;
-                sincostan_of(&s, &c, &t, invTan2Theta);
+                sincostan(&s, &c, &t, 0.5f * (d - a), b);
 
                 //glm::mat3 P = glm::mat3(
                 //    c, 0, -s,
@@ -390,12 +398,12 @@ int main() {
 
         DrawGrid(GridAxis::XZ, 1.0f, 10, { 128, 128, 128 });
 
-        //static glm::vec3 U = { 1, 0, 0 };
-        //static glm::vec3 V = { 0, 1, 0 };
-        //static glm::vec3 W = { 0, 0, 1 };
-        static glm::vec3 U = { 0.363252401, 0.425909996, -0.522605419 };
-        static glm::vec3 V = { -0.283039778, 0.830360413, 0.830360413 };
-        static glm::vec3 W = { 0.833595634, -0.0345231034,0.551279962 };
+        static glm::vec3 U = { 1, 0, 0 };
+        static glm::vec3 V = { 0, 1, 0 };
+        static glm::vec3 W = { 0, 0, 1 };
+        //static glm::vec3 U = { 0.363252401, 0.425909996, -0.522605419 };
+        //static glm::vec3 V = { -0.283039778, 0.830360413, 0.830360413 };
+        //static glm::vec3 W = { 0.833595634, -0.0345231034,0.551279962 };
         ManipulatePosition(camera, &U, 0.2f);
         ManipulatePosition(camera, &V, 0.2f);
         ManipulatePosition(camera, &W, 0.2f);
