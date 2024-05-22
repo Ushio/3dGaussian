@@ -112,13 +112,12 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
 {
     glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
 
-    // it is invalid when cos2theta == sin2theta == 0
     auto sincostan = []( float* s, float* c, float* t, float cos_2theta, float sin_2theta )
     {                
         float X = cos_2theta;
         float Y = sin_2theta;
         float YY = Y * Y;
-        float L = ss_sqrt(X * X + YY);
+        float L = ss_sqrt(X * X + YY + FLT_MIN /* handle the singularity */);
 
         // The half vector
         float hx = X + sign_of(X) * L;
