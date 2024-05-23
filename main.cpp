@@ -117,7 +117,7 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
         float X = cos_2theta;
         float Y = sin_2theta;
         float YY = Y * Y;
-        float L = ss_sqrt(X * X + YY + FLT_MIN /* handle the singularity */);
+        float L = ss_sqrt(ss_max(X * X + YY, FLT_MIN) /* handle the singularity */);
 
         // The half vector
         float hx = X + sign_of(X) * L;
