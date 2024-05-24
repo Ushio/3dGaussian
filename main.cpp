@@ -299,6 +299,17 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
     es[2] = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
 }
 
+glm::vec3 plasma_quintic(float x)
+{
+    x = glm::clamp(x, 0.0f, 1.0f);
+    glm::vec4 x1 = glm::vec4(1.0f, x, x * x, x * x * x); // 1 x x2 x3
+    glm::vec4 x2 = x1 * x1.w * x; // x4 x5 x6 x7
+    return glm::vec3(
+        glm::dot(x1, glm::vec4(+0.063861086f, +1.992659096f, -1.023901152f, -0.490832805f)) + glm::dot(glm::vec2(x2), glm::vec2(+1.308442123f, -0.914547012f)),
+        glm::dot(x1, glm::vec4(+0.049718590f, -0.791144343f, +2.892305078f, +0.811726816f)) + glm::dot(glm::vec2(x2), glm::vec2(-4.686502417f, +2.717794514f)),
+        glm::dot(x1, glm::vec4(+0.513275779f, +1.580255060f, -5.164414457f, +4.559573646f)) + glm::dot(glm::vec2(x2), glm::vec2(-1.916810682f, +0.570638854f)));
+}
+
 int main() {
     using namespace pr;
 
@@ -384,12 +395,14 @@ int main() {
     Image2DRGBA8 earth;
     earth.load("earth.jpg");
 
+
     while (pr::NextFrame() == false) {
         if (IsImGuiUsingMouse() == false) {
             UpdateCameraBlenderLike(&camera);
         }
 
-        ClearBackground(0.1f, 0.1f, 0.1f, 1);
+        // ClearBackground(0.1f, 0.1f, 0.1f, 1);
+        ClearBackground(tex);
 
         BeginCamera(camera);
 
@@ -407,16 +420,16 @@ int main() {
         ManipulatePosition(camera, &V, 0.2f);
         ManipulatePosition(camera, &W, 0.2f);
 
-        {
-            glm::vec3 N = glm::cross(U, V);
-            V = glm::normalize(glm::cross(N, U)) * glm::length(V);
+        //{
+        //    glm::vec3 N = glm::cross(U, V);
+        //    V = glm::normalize(glm::cross(N, U)) * glm::length(V);
 
-            DrawArrow({ 0,0,0 }, U, 0.01f, { 255,0,0 });
-            DrawArrow({ 0,0,0 }, V, 0.01f, { 0,255,0 });
-            DrawArrow({ 0,0,0 }, W, 0.01f, { 0,0,255 });
+        //    DrawArrow({ 0,0,0 }, U, 0.01f, { 255,0,0 });
+        //    DrawArrow({ 0,0,0 }, V, 0.01f, { 0,255,0 });
+        //    DrawArrow({ 0,0,0 }, W, 0.01f, { 0,0,255 });
 
-            W = glm::normalize(N) * glm::length(W);
-        }
+        //    W = glm::normalize(N) * glm::length(W);
+        //}
 
 
         // https://tavianator.com/2014/ellipsoid_bounding_boxes.html
@@ -425,253 +438,87 @@ int main() {
         float dz = std::sqrt(U.z * U.z + V.z * V.z + W.z * W.z);
         DrawCube({ 0, 0, 0 }, { dx * 2, dy * 2, dz * 2 }, { 255,255,255 });
 
-        
-        glm::mat3 R = glm::mat3(glm::normalize(U), glm::normalize(V), glm::normalize(W));
-        glm::mat3 L = glm::mat3(
-            lengthSquared(U), 0, 0,
-            0, lengthSquared(V), 0,
-            0, 0, lengthSquared(W)
-        );
-        glm::mat3 cov = R * L * glm::transpose(R);
-        glm::mat3 inv_cov = glm::inverse( cov );
-        
-        { // xy projection
-
-            // need to take 2x2 in cov not inv_cov
-            glm::mat2 cov_pj = glm::mat2(cov[0][0], cov[1][0], cov[0][1], cov[1][1]);
-            float det;
-            float lambda0;
-            float lambda1;
-            eignValues(&lambda0, &lambda1, &det, cov_pj);
-
-            glm::vec2 e0;
-            glm::vec2 e1;
-            eigenVectors_of_symmetric(&e0, &e1, cov_pj, lambda0);
-            e0 *= std::sqrtf(lambda0);
-            e1 *= std::sqrtf(lambda1);
-
-            DrawEllipse(glm::vec3(0, 0, dz), glm::vec3(e0.x, e0.y, 0), glm::vec3(e1.x, e1.y, 0), { 128, 0, 0 });
-        }
-
-        { // yz projection
-
-            // need to take 2x2 in cov not inv_cov
-            glm::mat2 cov_pj = glm::mat2(cov[1][1], cov[2][1], cov[1][2], cov[2][2]);
-            float det;
-            float lambda0;
-            float lambda1;
-            eignValues(&lambda0, &lambda1, &det, cov_pj);
-
-            glm::vec2 e0;
-            glm::vec2 e1;
-            eigenVectors_of_symmetric(&e0, &e1, cov_pj, lambda0);
-            e0 *= std::sqrtf(lambda0);
-            e1 *= std::sqrtf(lambda1);
-
-            DrawEllipse(glm::vec3(dx, 0, 0), glm::vec3(00, e0.x, e0.y), glm::vec3(0, e1.x, e1.y), { 0, 128, 0 });
-        }
-
-
-        //static glm::vec3 P = { 0 ,0 ,0 };
-        //float d = glm::dot( P, inv_cov * P );
-        //ManipulatePosition(camera, &P, 0.2f);
-
-        //char label[128];
-        //sprintf(label, "%.2f", d);
-        //DrawText(P, label);
-        //
-
-        for( float depth = -1.0f ; depth <= 1.0f ; depth += 0.03f )
         {
-            float kPrime2 = 1.0f - sqr(glm::dot(W, W * depth) / glm::dot(W, W));
-            float kPrime = std::sqrt(kPrime2);
+            float cov_00 = U.x * U.x + V.x * V.x + W.x * W.x;
+            float cov_01 = U.x * U.y + V.x * V.y + W.x * W.y;
+            float cov_02 = U.x * U.z + V.x * V.z + W.x * W.z;
+            float cov_11 = U.y * U.y + V.y * V.y + W.y * W.y;
+            float cov_12 = U.y * U.z + V.y * V.z + W.y * W.z;
+            float cov_22 = U.z * U.z + V.z * V.z + W.z * W.z;
+            glm::mat3 cov = {
+                cov_00, cov_01, cov_02,
+                cov_01, cov_11, cov_12,
+                cov_02, cov_12, cov_22
+            };
 
-            DrawEllipse(W * depth, U * kPrime, V * kPrime, { 128 , 128 , 128 }, 64);
+            glm::mat3 inv_cov = glm::inverse( cov );
+
+            glm::mat3 ellipsoidAffine = { U, V, W };
+            SetObjectTransform(ellipsoidAffine);
+            DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
+            SetObjectIdentify();
+
+            float lambdas[3];
+            glm::vec3 es[3];
+            eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+            DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
+            DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
+            DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
+            DrawLine(-es[0] * std::sqrt(lambdas[0]), es[0] * std::sqrt(lambdas[0]), { 255,0,255 });
+            DrawLine(-es[1] * std::sqrt(lambdas[1]), es[1] * std::sqrt(lambdas[1]), { 255,255,0 });
+            DrawLine(-es[2] * std::sqrt(lambdas[2]), es[2] * std::sqrt(lambdas[2]), { 0,255,255 });
         }
 
-        float lambdas[3];
-        glm::vec3 es[3];
-        eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
-        DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
-        DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
-        DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
-        DrawLine(-es[0] * std::sqrt(lambdas[0]), es[0] * std::sqrt(lambdas[0]), { 255,0,255 });
-        DrawLine(-es[1] * std::sqrt(lambdas[1]), es[1] * std::sqrt(lambdas[1]), { 255,255,0 });
-        DrawLine(-es[2] * std::sqrt(lambdas[2]), es[2] * std::sqrt(lambdas[2]), { 0,255,255 });
+        image.allocate(GetScreenWidth() / stride, GetScreenHeight() / stride);
+        CameraRayGenerator rayGenerator(GetCurrentViewMatrix(), GetCurrentProjMatrix(), image.width(), image.height());
 
-        // naiive 
-        //{
-        //    //glm::mat3 V_all = glm::identity<glm::mat3>();
-        //    float A_00 = cov[0][0];
-        //    float A_01 = cov[1][0];
-        //    float A_02 = cov[2][0];
-        //    float A_11 = cov[1][1];
-        //    float A_12 = cov[2][1];
-        //    float A_22 = cov[2][2];
+        for (int j = 0; j < image.height(); ++j)
+        {
+            for (int i = 0; i < image.width(); ++i)
+            {
+                glm::vec3 ro, rd;
+                rayGenerator.shoot(&ro, &rd, i, j, 0.5f, 0.5f);
 
-        //    glm::vec3 wbasisXY[2] = { {1, 0, 0}, {0, 1, 0} };
+                glm::vec3 Z = glm::normalize(rd);
+                glm::vec3 X;
+                glm::vec3 Y;
+                GetOrthonormalBasis(Z, &X, &Y);
 
-        //    auto sincos_of = []( float *s, float *c, float invTan2Theta )
-        //    {
-        //        float tanTheta = 1.0f / (sign_of(invTan2Theta) * std::sqrtf(1.0f + invTan2Theta * invTan2Theta) + invTan2Theta);
-        //        float cosTheta = 1.0f / std::sqrtf(1.0f + tanTheta * tanTheta);
-        //        float sinTheta = tanTheta * cosTheta;
-        //        *s = sinTheta;
-        //        *c = cosTheta;
-        //    };
+                glm::mat3 toLocal = {
+                    glm::vec3(X.x, Y.x, Z.x),
+                    glm::vec3(X.y, Y.y, Z.y),
+                    glm::vec3(X.z, Y.z, Z.z),
+                };
+                glm::vec3 u = toLocal * U;
+                glm::vec3 v = toLocal * V;
+                glm::vec3 w = toLocal * W;
 
-        //    const float eps = 1.0e-15f;
-        //    for (int i = 0; i < nJacobiItr; i++)
-        //    {
-        //        {
-        //            float b = A_12;
-        //            float a = A_11;
-        //            float d = A_22;
+                glm::vec2 v_rel = toLocal * ro;
 
-        //            if( eps < glm::abs( b ) )
-        //            {
-        //                float c;
-        //                float s;
-        //                float invTan2Theta = 0.5f * ( d - a ) / b;
-        //                sincos_of( &s, &c, invTan2Theta );
+                float cov_00 = u.x * u.x + v.x * v.x + w.x * w.x;
+                float cov_01 = u.x * u.y + v.x * v.y + w.x * w.y;
+                float cov_11 = u.y * u.y + v.y * v.y + w.y * w.y;
+                glm::mat2 cov = { cov_00, cov_01, cov_01, cov_11 };
+                glm::mat2 inv_cov = glm::inverse(cov);
 
-        //                //glm::mat3 P = glm::mat3(
-        //                //    1, 0, 0,
-        //                //    0, c, -s,
-        //                //    0, s, c
-        //                //);
+                float d2 = glm::dot(v_rel, inv_cov * v_rel);
+                float alpha = glm::exp(-0.5f * d2);
+                glm::u8vec3 color = glm::u8vec3(glm::clamp(plasma_quintic(alpha) * 255.0f, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(255.0f, 255.0f, 255.0f)));
+                
+                if (glm::abs(d2 - 1.0f) < 0.005f)
+                {
+                    color = { 255,255,255 };
+                }
+                if (glm::abs(d2 - 4.0f) < 0.005f)
+                {
+                    color = { 128,128,128 };
+                }
+                image(i, j) = glm::u8vec4(color, 255);
 
-        //                for (int j = 0; j < 2; j++)
-        //                {
-        //                    float y = c * wbasisXY[j].y - s * wbasisXY[j].z;
-        //                    float z = s * wbasisXY[j].y + c * wbasisXY[j].z;
-        //                    wbasisXY[j].y = y;
-        //                    wbasisXY[j].z = z;
-        //                }
-
-        //                float nA_01 = c * A_01 - s * A_02;
-        //                float nA_02 = c * A_02 + s * A_01;
-        //                float nA_11 = c * ( c * A_11 - s * A_12 ) - s * ( c * A_12 - s * A_22 );
-        //                float nA_12 = 0.0f; // focus
-        //                float nA_22 = s * ( c * A_12 + s * A_11 ) + c * ( c * A_22 + s * A_12 );
-        //                A_01 = nA_01;
-        //                A_02 = nA_02;
-        //                A_11 = nA_11;
-        //                A_12 = nA_12;
-        //                A_22 = nA_22;
-        //                //printf("%f\n", L[1][0] - nA_01);
-        //                //printf("%f\n", L[2][0] - nA_02);
-        //                //printf("%f\n", L[1][1] - nA_11);
-        //                //printf("%f\n", L[2][2] - nA_22);
-        //            }
-        //        }
-
-        //        {
-        //            float b = A_01;
-        //            float a = A_00;
-        //            float d = A_11;
-        //            if (eps < glm::abs(b))
-        //            {
-        //                float c;
-        //                float s;
-        //                float invTan2Theta = 0.5f * (d - a) / b;
-        //                sincos_of(&s, &c, invTan2Theta);
-
-        //                //glm::mat3 P = glm::mat3(
-        //                //    c, -s, 0,
-        //                //    s, c, 0,
-        //                //    0, 0, 1
-        //                //);
-
-        //                for (int j = 0; j < 2; j++)
-        //                {
-        //                    float x = c * wbasisXY[j].x - s * wbasisXY[j].y;
-        //                    float y = s * wbasisXY[j].x + c * wbasisXY[j].y;
-        //                    wbasisXY[j].x = x;
-        //                    wbasisXY[j].y = y;
-        //                }
-
-        //                float nA_00 = c * (c * A_00 - s * A_01) - s * (c * A_01 - s * A_11);
-        //                float nA_01 = 0.0f; // focus
-        //                float nA_02 = c * A_02 - s * A_12;
-        //                float nA_11 = s * (c * A_01 + s * A_00) + c * (c * A_11 + s * A_01);
-        //                float nA_12 = c * A_12 + s * A_02;
-        //                A_00 = nA_00;
-        //                A_01 = nA_01;
-        //                A_02 = nA_02;
-        //                A_11 = nA_11;
-        //                A_12 = nA_12;
-        //                //printf("%f\n", L[0][0] - nA_00);
-        //                //printf("%f\n", L[1][0] - nA_01);
-        //                //printf("%f\n", L[2][0] - nA_02);
-        //                //printf("%f\n", L[1][1] - nA_11);
-        //                //printf("%f\n", L[2][1] - nA_12);
-        //            }
-        //        }
-
-        //        {
-        //            float b = A_02;
-        //            float a = A_00;
-        //            float d = A_22;
-        //            if (eps < glm::abs(b))
-        //            {
-        //                float c;
-        //                float s;
-        //                float invTan2Theta = 0.5f * (d - a) / b;
-        //                sincos_of(&s, &c, invTan2Theta);
-
-        //                //glm::mat3 P = glm::mat3(
-        //                //    c, 0, -s,
-        //                //    0, 1, 0,
-        //                //    s, 0, c
-        //                //);
-
-        //                for (int j = 0; j < 2; j++)
-        //                {
-        //                    float x = c * wbasisXY[j].x - s * wbasisXY[j].z;
-        //                    float z = s * wbasisXY[j].x + c * wbasisXY[j].z;
-        //                    wbasisXY[j].x = x;
-        //                    wbasisXY[j].z = z;
-        //                }
-
-        //                float nA_00 = c * ( c * A_00 - s * A_02 ) - s * ( c * A_02 - s * A_22 );
-        //                float nA_01 = c * A_01 - s * A_12;
-        //                float nA_02 = 0.0f; // focus
-        //                float nA_12 = c * A_12 + s * A_01;
-        //                float nA_22 = s * ( c * A_02 + s * A_00 ) + c * ( c * A_22 + s * A_02 );
-        //                A_00 = nA_00;
-        //                A_01 = nA_01;
-        //                A_02 = nA_02;
-        //                A_12 = nA_12;
-        //                A_22 = nA_22;
-        //                //printf("%f\n", L[0][0] - nA_00);
-        //                //printf("%f\n", L[1][0] - nA_01);
-        //                //printf("%f\n", L[2][0] - nA_02);
-        //                //printf("%f\n", L[2][1] - nA_12);
-        //                //printf("%f\n", L[2][2] - nA_22);
-        //            }
-        //        }
-        //    }
-
-        //    //DrawArrow({ 0,0,0 }, eigen0, 0.01f, { 255,0,255 });
-        //    //DrawArrow({ 0,0,0 }, eigen1, 0.01f, { 255,255,0 });
-        //    //DrawArrow({ 0,0,0 }, eigen2, 0.01f, { 0,255,255 });
-        //    //DrawArrow({ 0,0,0 }, eigen0 * std::sqrt(A_00), 0.01f, { 255,0,255 });
-        //    //DrawArrow({ 0,0,0 }, eigen1 * std::sqrt(A_11), 0.01f, { 255,255,0 });
-        //    //DrawArrow({ 0,0,0 }, eigen2 * std::sqrt(A_22), 0.01f, { 0,255,255 });
-
-        //    glm::vec3 wbasisZ = glm::cross(wbasisXY[0], wbasisXY[1]);
-        //    glm::vec3 e0 = { wbasisXY[0].x, wbasisXY[1].x, wbasisZ.x };
-        //    glm::vec3 e1 = { wbasisXY[0].y, wbasisXY[1].y, wbasisZ.y };
-        //    glm::vec3 e2 = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
-
-        //    DrawArrow({ 0,0,0 }, e0, 0.01f, { 255,0,255 });
-        //    DrawArrow({ 0,0,0 }, e1, 0.01f, { 255,255,0 });
-        //    DrawArrow({ 0,0,0 }, e2, 0.01f, { 0,255,255 });
-        //    DrawLine(-e0 * std::sqrt(A_00), e0 * std::sqrt(A_00), { 255,0,255 });
-        //    DrawLine(-e1 * std::sqrt(A_11), e1 * std::sqrt(A_11), { 255,255,0 });
-        //    DrawLine(-e2 * std::sqrt(A_22), e2 * std::sqrt(A_22), { 0,255,255 });
-        //}
+                // image(i, j) = glm::vec4(255.0f, 255.0f, 255.0f, 1.0f);
+            }
+        }
+        tex->upload(image);
 
         PopGraphicState();
         EndCamera();
