@@ -382,6 +382,7 @@ int main() {
     camera.lookat = { 0, 0, 0 };
     camera.zNear = 1.0f;
     camera.zFar = 1000.0f;
+    // camera.fovy = glm::radians( 90.0f );
 
     //camera.origin *= 100.0f;
     //camera.fovy = 0.005f;
@@ -391,10 +392,6 @@ int main() {
     ITexture* tex = CreateTexture();
     Image2DRGBA8 image;
     int stride = 1;
-
-    Image2DRGBA8 earth;
-    earth.load("earth.jpg");
-
 
     while (pr::NextFrame() == false) {
         if (IsImGuiUsingMouse() == false) {
@@ -419,6 +416,9 @@ int main() {
         ManipulatePosition(camera, &U, 0.2f);
         ManipulatePosition(camera, &V, 0.2f);
         ManipulatePosition(camera, &W, 0.2f);
+
+        static bool RT_mode = false;
+        static bool showWire = true;
 
         //{
         //    glm::vec3 N = glm::cross(U, V);
@@ -454,9 +454,13 @@ int main() {
             glm::mat3 inv_cov = glm::inverse( cov );
 
             glm::mat3 ellipsoidAffine = { U, V, W };
-            SetObjectTransform(ellipsoidAffine);
-            DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
-            SetObjectIdentify();
+
+            if (showWire)
+            {
+                SetObjectTransform(ellipsoidAffine);
+                DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
+                SetObjectIdentify();
+            }
 
             float lambdas[3];
             glm::vec3 es[3];
@@ -472,50 +476,114 @@ int main() {
         image.allocate(GetScreenWidth() / stride, GetScreenHeight() / stride);
         CameraRayGenerator rayGenerator(GetCurrentViewMatrix(), GetCurrentProjMatrix(), image.width(), image.height());
 
+        glm::mat4 viewMat = GetCurrentViewMatrix();
+        glm::mat3 viewRot = glm::mat3(viewMat);
+
         for (int j = 0; j < image.height(); ++j)
         {
             for (int i = 0; i < image.width(); ++i)
             {
-                glm::vec3 ro, rd;
-                rayGenerator.shoot(&ro, &rd, i, j, 0.5f, 0.5f);
+                if (RT_mode)
+                {
+                    glm::vec3 ro, rd;
+                    rayGenerator.shoot(&ro, &rd, i, j, 0.5f, 0.5f);
 
-                glm::vec3 Z = glm::normalize(rd);
-                glm::vec3 X;
-                glm::vec3 Y;
-                GetOrthonormalBasis(Z, &X, &Y);
+                    glm::vec3 Z = glm::normalize(rd);
+                    glm::vec3 X;
+                    glm::vec3 Y;
+                    GetOrthonormalBasis(Z, &X, &Y);
 
-                glm::mat3 toLocal = {
-                    glm::vec3(X.x, Y.x, Z.x),
-                    glm::vec3(X.y, Y.y, Z.y),
-                    glm::vec3(X.z, Y.z, Z.z),
-                };
-                glm::vec3 u = toLocal * U;
-                glm::vec3 v = toLocal * V;
-                glm::vec3 w = toLocal * W;
+                    glm::mat3 toLocal = {
+                        glm::vec3(X.x, Y.x, Z.x),
+                        glm::vec3(X.y, Y.y, Z.y),
+                        glm::vec3(X.z, Y.z, Z.z),
+                    };
+                    glm::vec3 u = toLocal * U;
+                    glm::vec3 v = toLocal * V;
+                    glm::vec3 w = toLocal * W;
 
-                glm::vec2 v_rel = toLocal * ro;
+                    glm::vec2 v_rel = toLocal * ro;
 
-                float cov_00 = u.x * u.x + v.x * v.x + w.x * w.x;
-                float cov_01 = u.x * u.y + v.x * v.y + w.x * w.y;
-                float cov_11 = u.y * u.y + v.y * v.y + w.y * w.y;
-                glm::mat2 cov = { cov_00, cov_01, cov_01, cov_11 };
-                glm::mat2 inv_cov = glm::inverse(cov);
+                    float cov_00 = u.x * u.x + v.x * v.x + w.x * w.x;
+                    float cov_01 = u.x * u.y + v.x * v.y + w.x * w.y;
+                    float cov_11 = u.y * u.y + v.y * v.y + w.y * w.y;
+                    glm::mat2 cov = { cov_00, cov_01, cov_01, cov_11 };
+                    glm::mat2 inv_cov = glm::inverse(cov);
 
-                float d2 = glm::dot(v_rel, inv_cov * v_rel);
-                float alpha = glm::exp(-0.5f * d2);
-                glm::u8vec3 color = glm::u8vec3(glm::clamp(plasma_quintic(alpha) * 255.0f, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(255.0f, 255.0f, 255.0f)));
+                    float d2 = glm::dot(v_rel, inv_cov * v_rel);
+                    float alpha = glm::exp(-0.5f * d2);
+                    glm::u8vec3 color = glm::u8vec3(glm::clamp(plasma_quintic(alpha) * 255.0f, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(255.0f, 255.0f, 255.0f)));
                 
-                if (glm::abs(d2 - 1.0f) < 0.005f)
-                {
-                    color = { 255,255,255 };
+                    if (glm::abs(d2 - 1.0f) < 0.005f)
+                    {
+                        color = { 255,255,255 };
+                    }
+                    if (glm::abs(d2 - 4.0f) < 0.005f)
+                    {
+                        color = { 128,128,128 };
+                    }
+                    image(i, j) = glm::u8vec4(color, 255);
                 }
-                if (glm::abs(d2 - 4.0f) < 0.005f)
+                else
                 {
-                    color = { 128,128,128 };
-                }
-                image(i, j) = glm::u8vec4(color, 255);
+                    // viewRot
+                    glm::vec3 u = viewRot * U;
+                    glm::vec3 v = viewRot * V;
+                    glm::vec3 w = viewRot * W;
 
-                // image(i, j) = glm::vec4(255.0f, 255.0f, 255.0f, 1.0f);
+                    float cov_00 = u.x * u.x + v.x * v.x + w.x * w.x;
+                    float cov_01 = u.x * u.y + v.x * v.y + w.x * w.y;
+                    float cov_02 = u.x * u.z + v.x * v.z + w.x * w.z;
+                    float cov_11 = u.y * u.y + v.y * v.y + w.y * w.y;
+                    float cov_12 = u.y * u.z + v.y * v.z + w.y * w.z;
+                    float cov_22 = u.z * u.z + v.z * v.z + w.z * w.z;
+                    glm::mat3 cov = {
+                        cov_00, cov_01, cov_02,
+                        cov_01, cov_11, cov_12,
+                        cov_02, cov_12, cov_22
+                    };
+                    // glm::vec3 u_ray = viewMat * glm::vec4( ( /* gaussian center */ - camera.origin ), 1.0f );
+                    glm::vec3 u_ray = viewMat * glm::vec4( 0, 0, 0, 1 );
+
+                    glm::mat3 J;
+                    J = {
+                        1.0f / u_ray.z, 0, 0,
+                        0, 1.0f / u_ray.z, 0,
+                        -u_ray.x / (u_ray.z * u_ray.z), -u_ray.y / (u_ray.z * u_ray.z), 1.0f
+                    };
+
+                    glm::mat3 covPrime = J * cov * glm::transpose( J );
+                    glm::mat2 covPrime2d = glm::mat2(
+                        covPrime[0][0], covPrime[0][1],
+                        covPrime[1][0], covPrime[1][1]
+                    );
+
+                    glm::mat2 inv_cov = glm::inverse(covPrime2d);
+
+                    float tanThetaY = std::tan( camera.fovy * 0.5f );
+                    float tanThetaX = tanThetaY / image.height() * image.width();
+
+                    glm::vec2 v_rel = glm::vec2(
+                        glm::mix(-tanThetaX, tanThetaX, (float)i / image.width()),
+                        glm::mix(tanThetaY, -tanThetaY, (float)j / image.height())
+                    ) - glm::vec2(u_ray.x / -u_ray.z, u_ray.y / -u_ray.z); // z is negative
+
+                    float d2 = glm::dot(v_rel, inv_cov * v_rel);
+                    float alpha = std::expf(-0.5f * d2);
+                    glm::u8vec3 color = glm::u8vec3(glm::clamp(plasma_quintic(alpha) * 255.0f, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(255.0f, 255.0f, 255.0f)));
+
+                    if (glm::abs(d2 - 1.0f) < 0.005f)
+                    {
+                        color = { 255,255,255 };
+                    }
+                    if (glm::abs(d2 - 4.0f) < 0.005f)
+                    {
+                        color = { 128,128,128 };
+                    }
+                    image(i, j) = glm::u8vec4(color, 255);
+
+                    // image(i, j) = glm::u8vec4(0, 0, 0, 255);
+                }
             }
         }
         tex->upload(image);
@@ -531,7 +599,8 @@ int main() {
 
         ImGui::SliderFloat("fov", &camera.fovy, 0, 0.1);
         ImGui::Text("cam d %f", glm::length(camera.origin));
-
+        ImGui::Checkbox("RT_mode", &RT_mode);
+        ImGui::Checkbox("showWire", &showWire);
         ImGui::End();
 
         EndImGui();
