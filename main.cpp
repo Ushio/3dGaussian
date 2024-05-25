@@ -451,16 +451,7 @@ int main() {
                 cov_02, cov_12, cov_22
             };
 
-            glm::mat3 inv_cov = glm::inverse( cov );
-
             glm::mat3 ellipsoidAffine = { U, V, W };
-
-            if (showWire)
-            {
-                SetObjectTransform(ellipsoidAffine);
-                DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
-                SetObjectIdentify();
-            }
 
             float lambdas[3];
             glm::vec3 es[3];
@@ -471,6 +462,19 @@ int main() {
             DrawLine(-es[0] * std::sqrt(lambdas[0]), es[0] * std::sqrt(lambdas[0]), { 255,0,255 });
             DrawLine(-es[1] * std::sqrt(lambdas[1]), es[1] * std::sqrt(lambdas[1]), { 255,255,0 });
             DrawLine(-es[2] * std::sqrt(lambdas[2]), es[2] * std::sqrt(lambdas[2]), { 0,255,255 });
+
+            if( showWire )
+            {
+                //SetObjectTransform(ellipsoidAffine);
+                //DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
+                //SetObjectIdentify();
+                glm::vec3 e0 = es[0] * std::sqrt(lambdas[0]);
+                glm::vec3 e1 = es[1] * std::sqrt(lambdas[1]);
+                glm::vec3 e2 = es[2] * std::sqrt(lambdas[2]);
+                DrawEllipse({ 0,0,0 }, e0, e1, { 255,255,255 }, 64);
+                DrawEllipse({ 0,0,0 }, e1, e2, { 255,255,255 }, 64);
+                DrawEllipse({ 0,0,0 }, e2, e0, { 255,255,255 }, 64);
+            }
         }
 
         image.allocate(GetScreenWidth() / stride, GetScreenHeight() / stride);
