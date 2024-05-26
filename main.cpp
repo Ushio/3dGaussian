@@ -431,13 +431,6 @@ int main() {
         //    W = glm::normalize(N) * glm::length(W);
         //}
 
-
-        // https://tavianator.com/2014/ellipsoid_bounding_boxes.html
-        float dx = std::sqrt(U.x * U.x + V.x * V.x + W.x * W.x);
-        float dy = std::sqrt(U.y * U.y + V.y * V.y + W.y * W.y);
-        float dz = std::sqrt(U.z * U.z + V.z * V.z + W.z * W.z);
-        DrawCube({ 0, 0, 0 }, { dx * 2, dy * 2, dz * 2 }, { 255,255,255 });
-
         {
             float cov_00 = U.x * U.x + V.x * V.x + W.x * W.x;
             float cov_01 = U.x * U.y + V.x * V.y + W.x * W.y;
@@ -451,7 +444,11 @@ int main() {
                 cov_02, cov_12, cov_22
             };
 
-            glm::mat3 ellipsoidAffine = { U, V, W };
+            // https://tavianator.com/2014/ellipsoid_bounding_boxes.html
+            float dx = std::sqrt(cov_00);// std::sqrt(U.x * U.x + V.x * V.x + W.x * W.x);
+            float dy = std::sqrt(cov_11);// std::sqrt(U.y * U.y + V.y * V.y + W.y * W.y);
+            float dz = std::sqrt(cov_22);// std::sqrt(U.z * U.z + V.z * V.z + W.z * W.z);
+            DrawCube({ 0, 0, 0 }, { dx * 2, dy * 2, dz * 2 }, { 255,255,255 });
 
             float lambdas[3];
             glm::vec3 es[3];
@@ -465,6 +462,7 @@ int main() {
 
             if( showWire )
             {
+                // glm::mat3 ellipsoidAffine = { U, V, W };
                 //SetObjectTransform(ellipsoidAffine);
                 //DrawSphere({ 0,0,0 }, 1.0f, { 128 ,128 ,128 }, 32, 32);
                 //SetObjectIdentify();
@@ -601,7 +599,7 @@ int main() {
         ImGui::Begin("Panel");
         ImGui::Text("fps = %f", GetFrameRate());
 
-        ImGui::SliderFloat("fov", &camera.fovy, 0, 0.1);
+        ImGui::SliderFloat("fov", &camera.fovy, 0, glm::radians( 170.0f));
         ImGui::Text("cam d %f", glm::length(camera.origin));
         ImGui::Checkbox("RT_mode", &RT_mode);
         ImGui::Checkbox("showWire", &showWire);
