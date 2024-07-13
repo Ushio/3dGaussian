@@ -310,6 +310,38 @@ glm::vec3 plasma_quintic(float x)
         glm::dot(x1, glm::vec4(+0.513275779f, +1.580255060f, -5.164414457f, +4.559573646f)) + glm::dot(glm::vec2(x2), glm::vec2(-1.916810682f, +0.570638854f)));
 }
 
+glm::uvec4 pcg4d(glm::uvec4 v) {
+    v = v * 1664525u + 1013904223u; 
+    v.x += v.y * v.w;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v.w += v.y * v.z;
+    v ^= v >> 16u;
+    v.x += v.y * v.w;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v.w += v.y * v.z;
+    return v; 
+}
+float uniformf(uint32_t x)
+{
+    uint32_t bits = (x >> 9) | 0x3f800000;
+    float value;
+    memcpy(&value, &bits, sizeof(float));
+    return value - 1.0f;
+}
+
+glm::vec4 boxmular4( float X0, float Y0, float X1, float Y1 )
+{
+    float k0 = ss_min( sqrt(-2.0f * log(X0)), FLT_MAX );
+    float k1 = ss_min( sqrt(-2.0f * log(X1)), FLT_MAX );
+    float Z0 = k0 * cos(2.0f * glm::pi<float>() * Y0);
+    float Z1 = k0 * sin(2.0f * glm::pi<float>() * Y0);
+    float Z2 = k1 * cos(2.0f * glm::pi<float>() * Y1);
+    float Z3 = k1 * sin(2.0f * glm::pi<float>() * Y1);
+    return { Z0, Z1, Z2, Z3 };
+}
+
 int main() {
     using namespace pr;
 
@@ -474,6 +506,18 @@ int main() {
                 DrawEllipse({ 0,0,0 }, e2, e0, { 255,255,255 }, 64);
             }
         }
+
+        //glm::mat3 ellipsoidAffine = { U, V, W };
+
+        //for (int i = 0; i < 10000; i++)
+        //{
+        //    glm::uvec4 r = pcg4d({ i, 0, 0, 0 });
+        //    glm::vec3 p = boxmular4(uniformf(r.x), uniformf(r.y), uniformf(r.z), uniformf(r.w));
+
+        //    p = ellipsoidAffine * p;
+
+        //    DrawSphere(p, 0.01f, { 255, 255, 255 }, 4, 4);
+        //}
 
         image.allocate(GetScreenWidth() / stride, GetScreenHeight() / stride);
         CameraRayGenerator rayGenerator(GetCurrentViewMatrix(), GetCurrentProjMatrix(), image.width(), image.height());
