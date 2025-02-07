@@ -337,11 +337,8 @@ void eigen_decomposition_jacobi(glm::vec3 es[3], float lambdas[3], glm::mat3 B )
             //float s = sin(two_theta * 0.5f);
             //float c = cos(two_theta * 0.5f);
 
-            for (int j = 0; j < 3; j++)
-            {
-                B[index_b1][j] = +c * b1[j] + s * b2[j];
-                B[index_b2][j] = -s * b1[j] + c * b2[j];
-            }
+            B[index_b1] = +c * b1 + s * b2;
+            B[index_b2] = -s * b1 + c * b2;
         }
 
         if (convergence < convergence_previous && convergence != 0.0f )
