@@ -332,6 +332,11 @@ void eigen_decomposition_jacobi(glm::vec3 es[3], float lambdas[3], glm::mat3 B )
             float c = H.x / L;
             float s = H.y / L;
 
+            // Equivalent to:
+            //float two_theta = atan(Py / Px);
+            //float s = sin(two_theta * 0.5f);
+            //float c = cos(two_theta * 0.5f);
+
             for (int j = 0; j < 3; j++)
             {
                 B[index_b1][j] = +c * b1[j] + s * b2[j];
