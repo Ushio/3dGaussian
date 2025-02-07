@@ -299,6 +299,62 @@ void eigen_decomposition( glm::vec3 es[3], float lambdas[3], float A_00, float A
     es[2] = { wbasisXY[0].z, wbasisXY[1].z, wbasisZ.z };
 }
 
+// single side jacobi compact implementation Assume B is symmetric
+void eigen_decomposition_jacobi(glm::vec3 es[3], float lambdas[3], glm::mat3 B )
+{
+    float convergence_previous = FLT_MAX;
+
+    for(;;)
+    {
+        float convergence = 0.0f;
+
+        for (int i = 0; i < 3; i++)
+        {
+            int index_b1 = i;
+            int index_b2 = (i + 1) % 3;
+            glm::vec3 b1 = B[index_b1];
+            glm::vec3 b2 = B[index_b2];
+
+            float Py = 2.0f * glm::dot(b1, b2);
+            float Px = glm::dot(b1, b1) - glm::dot(b2, b2);
+            float PL = sqrtf(Px * Px + Py * Py);
+
+            convergence = glm::max(convergence, glm::abs(Py));
+
+            if (PL == 0.0f)
+            {
+                continue; // no rotation
+            }
+
+            float sgn = 0.0f < Px ? 1.0f : -1.0f;
+            glm::vec2 H = { PL + Px * sgn, Py * sgn };
+            float L = glm::length(H);
+            float c = H.x / L;
+            float s = H.y / L;
+
+            for (int j = 0; j < 3; j++)
+            {
+                B[index_b1][j] = +c * b1[j] + s * b2[j];
+                B[index_b2][j] = -s * b1[j] + c * b2[j];
+            }
+        }
+
+        if (convergence < convergence_previous && convergence != 0.0f )
+        {
+            convergence_previous = convergence;
+            continue;
+        }
+        break;
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        float l = glm::length(B[i]);
+        lambdas[i] = l;
+        es[i] = B[i] / l;
+    }
+}
+
 glm::vec3 plasma_quintic(float x)
 {
     x = glm::clamp(x, 0.0f, 1.0f);
@@ -382,8 +438,11 @@ int main() {
 
         float lambdas[3];
         glm::vec3 es[3];
-        eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+        //eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
 
+        eigen_decomposition_jacobi(es, lambdas, cov);
+
+        //printf("%f\n", glm::abs(glm::dot(es[1], es[2])));
         PR_ASSERT(glm::abs(glm::dot(es[0], es[1])) < 1.0e-6f);
         PR_ASSERT(glm::abs(glm::dot(es[1], es[2])) < 1.0e-6f);
         PR_ASSERT(glm::abs(glm::dot(es[2], es[0])) < 1.0e-6f);
@@ -392,7 +451,7 @@ int main() {
         float L_eigen_ref = ss_max(ss_max(L[0][0], L[1][1]), L[2][2]);
         float S_eigen = ss_min(ss_min(lambdas[0], lambdas[1]), lambdas[2]);
         float L_eigen = ss_max(ss_max(lambdas[0], lambdas[1]), lambdas[2]);
-        float epsL = FLT_EPSILON * L_eigen_ref * 8.0f;
+        float epsL = FLT_EPSILON * L_eigen_ref * 6.0f;
         PR_ASSERT( glm::abs( S_eigen - S_eigen_ref ) < epsL);
         PR_ASSERT( glm::abs( L_eigen - L_eigen_ref ) < epsL);
 
@@ -480,11 +539,14 @@ int main() {
             float dx = std::sqrt(cov_00);// std::sqrt(U.x * U.x + V.x * V.x + W.x * W.x);
             float dy = std::sqrt(cov_11);// std::sqrt(U.y * U.y + V.y * V.y + W.y * W.y);
             float dz = std::sqrt(cov_22);// std::sqrt(U.z * U.z + V.z * V.z + W.z * W.z);
-            DrawCube({ 0, 0, 0 }, { dx * 2, dy * 2, dz * 2 }, { 255,255,255 });
+            //DrawCube({ 0, 0, 0 }, { dx * 2, dy * 2, dz * 2 }, { 255,255,255 });
 
             float lambdas[3];
             glm::vec3 es[3];
-            eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+            // eigen_decomposition(es, lambdas, cov[0][0], cov[1][0], cov[2][0], cov[1][1], cov[2][1], cov[2][2]);
+            eigen_decomposition_jacobi(es, lambdas, cov);
+
+
             DrawArrow({ 0,0,0 }, es[0], 0.01f, { 255,0,255 });
             DrawArrow({ 0,0,0 }, es[1], 0.01f, { 255,255,0 });
             DrawArrow({ 0,0,0 }, es[2], 0.01f, { 0,255,255 });
@@ -519,12 +581,21 @@ int main() {
         //    DrawSphere(p, 0.01f, { 255, 255, 255 }, 4, 4);
         //}
 
+
         image.allocate(GetScreenWidth() / stride, GetScreenHeight() / stride);
         CameraRayGenerator rayGenerator(GetCurrentViewMatrix(), GetCurrentProjMatrix(), image.width(), image.height());
 
         glm::mat4 viewMat = GetCurrentViewMatrix();
         glm::mat3 viewRot = glm::mat3(viewMat);
 
+        {
+            glm::vec3 u_ray = viewMat * glm::vec4(0, 0, 0, 1);
+            float zcomp0 = -u_ray.x / (u_ray.z * u_ray.z);
+            float zcomp1 = -u_ray.y / (u_ray.z * u_ray.z);
+            printf("%f %f\n", zcomp0, zcomp1);
+        }
+
+        if(0)
         for (int j = 0; j < image.height(); ++j)
         {
             for (int i = 0; i < image.width(); ++i)
